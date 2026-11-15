@@ -1,0 +1,6 @@
+-r src/agent/requirements.txt
+fpdf2==2.9.0
+httpx
+pytest
+pyyaml
+ruff

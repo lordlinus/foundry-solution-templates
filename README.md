@@ -13,7 +13,7 @@ so every template here can be listed in the Foundry Toolkit for VS Code
 | Template | What it demonstrates | Status |
 |---|---|---|
 | [AG-UI Web Client for a Hosted Agent](ag-ui-hosted-agent/) | A CopilotKit browser chat for a Hosted Agent over AG-UI, with Entra sign-in, per-user threads, and human approval of agent actions. | Validated live. Proposed upstream in [microsoft/Foundry-Agent-Solution-Templates#20](https://github.com/microsoft/Foundry-Agent-Solution-Templates/pull/20). |
-| Medical underwriting copilot | Scanned medical records → OCR → a grounded draft underwriting report, audited by a second model and reviewed beside the source. Synthetic data. | In progress |
+| [Medical underwriting copilot](medical-underwriting-copilot/) | Scanned medical records → OCR → a grounded draft underwriting report, audited by a second model and reviewed beside the source. Synthetic data. | Offline-validated; not yet deployed live |
 | Claims analyst on BYO-AKS | A hosted agent on your own AKS cluster with Kata-isolated sessions, plus its CopilotKit web app. | Planned; BYO-AKS is in private preview |
 
 ## Use a template

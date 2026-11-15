@@ -4,11 +4,30 @@
             "id": "ag-ui-hosted-agent",
             "title": "AG-UI Web Client for a Hosted Agent",
             "description": "Demonstrates a browser chat client for a Hosted Agent over AG-UI with CopilotKit, including Microsoft Entra sign-in, per-user threads, and human approval of agent actions.",
-            "tags": ["AG-UI", "Web Client", "Human-in-the-loop"],
+            "tags": [
+                "AG-UI",
+                "Web Client",
+                "Human-in-the-loop"
+            ],
             "repo": "https://github.com/lordlinus/foundry-solution-templates",
             "githubUrl": "https://github.com/lordlinus/foundry-solution-templates/tree/main/ag-ui-hosted-agent",
             "ref": "main",
             "path": "ag-ui-hosted-agent",
+            "readmePath": "README.md"
+        },
+        {
+            "id": "medical-underwriting-copilot",
+            "title": "Medical Underwriting Copilot",
+            "description": "Demonstrates a hosted agent that drafts a source-cited underwriting report from a scanned medical record, grounded in guidelines in Azure AI Search and reviewed by a second model, with the report shown beside the original document.",
+            "tags": [
+                "Document Intelligence",
+                "Human Review",
+                "Azure AI Search"
+            ],
+            "repo": "https://github.com/lordlinus/foundry-solution-templates",
+            "githubUrl": "https://github.com/lordlinus/foundry-solution-templates/tree/main/medical-underwriting-copilot",
+            "ref": "main",
+            "path": "medical-underwriting-copilot",
             "readmePath": "README.md"
         }
     ]

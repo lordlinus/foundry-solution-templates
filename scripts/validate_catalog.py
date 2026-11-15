@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 REPO = re.compile(r"^https://github[.]com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/?$")
 REQUIRED = ("id", "title", "description", "repo", "githubUrl", "ref", "path")
+# Gitignored dependency and build folders: never committed, so never in the downloaded archive.
+LOCAL_ONLY = {"node_modules", ".venv", ".next", ".azure", "__pycache__", ".pytest_cache", ".ruff_cache"}
 
 
 def safe_relative(path: str) -> bool:
@@ -52,7 +54,7 @@ def validate(catalog: dict) -> list[str]:
                 continue
             if not (folder / t.get("readmePath", "README.md")).is_file():
                 errors.append(f"{t['id']}: README not found.")
-            links = [p for p in folder.rglob("*") if p.is_symlink()]
+            links = [p for p in folder.rglob("*") if p.is_symlink() and not LOCAL_ONLY & set(p.parts)]
             if links:
                 errors.append(f"{t['id']}: symlinks are not supported by the extension: {links[:3]}.")
             if not t["githubUrl"].endswith(f"/tree/{t['ref']}/{t['path']}"):

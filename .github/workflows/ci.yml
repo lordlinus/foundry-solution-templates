@@ -36,3 +36,22 @@ jobs:
       - run: az bicep build --file infra/app.bicep --stdout > /dev/null
       - working-directory: ag-ui-hosted-agent/src/web
         run: npm ci && npm run typecheck && npm test && npm run build
+
+  medical-underwriting-copilot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: medical-underwriting-copilot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check . && ruff format --check . && pytest
+      - run: az bicep build --file infra/app.bicep --stdout > /dev/null
+      - working-directory: medical-underwriting-copilot/src/web
+        run: npm ci && npm run typecheck && npm test && npm run build

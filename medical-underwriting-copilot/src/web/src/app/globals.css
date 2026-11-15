@@ -1,0 +1,19 @@
+body { margin: 0; font-family: system-ui, sans-serif; color: #1b1b1b; }
+header { padding: 12px 20px; border-bottom: 1px solid #ddd; display: flex; gap: 16px; align-items: baseline; }
+header p { margin: 0; color: #666; }
+main { padding: 16px 20px; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: calc(100vh - 120px); }
+.split iframe { width: 100%; height: 100%; border: 1px solid #ccc; }
+.panel { overflow: auto; }
+section { margin-bottom: 18px; }
+h2 { font-size: 16px; margin: 0 0 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+td, th { border: 1px solid #ddd; padding: 4px 6px; text-align: left; vertical-align: top; }
+.cite { border: 0; background: #e8f0fe; color: #0f4fbd; border-radius: 4px; padding: 0 6px; cursor: pointer; font-size: 12px; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; background: #eee; }
+.pass { background: #e6f4ea; color: #1e6b34; }
+.fail { background: #fdecea; color: #a1261b; }
+.flag { background: #fff4ce; }
+.steps li { font-size: 13px; color: #555; }
+pre { white-space: pre-wrap; font-size: 12px; }
+.tabs button { margin-right: 6px; }

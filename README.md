@@ -45,6 +45,24 @@ request to `microsoft/foundry-dev-tools` (base `template/dev`); see
 for an example. Because the download is anonymous, this repository must stay
 public.
 
+## See these templates in VS Code now
+
+Until a template is in Microsoft's catalog, you can point your own Foundry
+Toolkit at this repository's catalog. It lists Microsoft's templates and the
+ones here:
+
+```bash
+scripts/use-this-catalog-in-vscode.sh          # then: Developer: Reload Window
+scripts/use-this-catalog-in-vscode.sh --undo   # back to Microsoft's catalog
+```
+
+The script edits the installed extension on the machine where it runs; for WSL
+or Remote-SSH, run it on that host. It is unsupported: it checks that the
+catalog is valid and that the extension version matches what it expects, and it
+keeps a backup. An extension update replaces the patched files, so run it again
+after updating. Microsoft's entries in this catalog are copied from
+`microsoft/foundry-dev-tools` (`template/stable`) and don't update automatically.
+
 ## Contributing a template
 
 Read [AGENTS.md](AGENTS.md). In short: one self-contained folder, synthetic data

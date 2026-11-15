@@ -17,6 +17,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: python scripts/validate_catalog.py
+      - run: shellcheck -S warning scripts/*.sh
 
   ag-ui-hosted-agent:
     runs-on: ubuntu-latest

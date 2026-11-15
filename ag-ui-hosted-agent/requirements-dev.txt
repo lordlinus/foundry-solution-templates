@@ -3,4 +3,4 @@
 httpx
 pytest
 pyyaml
-ruff
+ruff==0.17.5

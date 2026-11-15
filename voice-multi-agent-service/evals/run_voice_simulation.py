@@ -32,7 +32,9 @@ AUDIO_EFFECTS = {"effects": ["telephonic_voice"], "volume_percentage": 15}
 def project_endpoint() -> str:
     if os.environ.get("FOUNDRY_PROJECT_ENDPOINT"):
         return os.environ["FOUNDRY_PROJECT_ENDPOINT"]
-    out = subprocess.run(["azd", "env", "get-value", "FOUNDRY_PROJECT_ENDPOINT"], capture_output=True, text=True)
+    out = subprocess.run(
+        ["azd", "env", "get-value", "FOUNDRY_PROJECT_ENDPOINT"], check=False, capture_output=True, text=True
+    )
     return out.stdout.strip()
 
 

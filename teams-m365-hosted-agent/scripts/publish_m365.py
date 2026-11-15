@@ -78,6 +78,7 @@ def az_token() -> str:
             "-o",
             "tsv",
         ],
+        check=False,
         capture_output=True,
         text=True,
     )

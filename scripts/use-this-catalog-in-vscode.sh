@@ -49,12 +49,15 @@ fi
 
 if [[ "$UNDO" == true ]]; then
   for bundle in "${bundles[@]}"; do
-    if [[ -f "$bundle.orig" ]]; then
-      mv "$bundle.orig" "$bundle"
-      echo "Restored: $bundle"
-    else
-      echo "Not patched: $bundle"
-    fi
+    bundled="$(dirname "$(dirname "$bundle")")/ai-foundry/templates/solution/solution-template-catalog.json"
+    for file in "$bundle" "$bundled"; do
+      if [[ -f "$file.orig" ]]; then
+        mv "$file.orig" "$file"
+        echo "Restored: $file"
+      else
+        echo "Not patched: $file"
+      fi
+    done
   done
   echo "Reload VS Code (Developer: Reload Window) to use Microsoft's catalog again."
   exit 0
@@ -63,10 +66,12 @@ fi
 URL="https://raw.githubusercontent.com/$REPO/$REF/$CATALOG_PATH"
 # Check the catalog first: if the extension cannot fetch or validate it, it silently falls back
 # to its bundled list and you would not see your templates.
-python3 -I - "$URL" <<'PY'
+CATALOG_COPY="$(mktemp)"
+trap 'rm -f "$CATALOG_COPY"' EXIT
+python3 -I - "$URL" "$CATALOG_COPY" <<'PY'
 import json, re, sys, urllib.request
 
-url = sys.argv[1]
+url, copy = sys.argv[1], sys.argv[2]
 try:
     catalog = json.load(urllib.request.urlopen(url, timeout=15))
 except Exception as exc:  # noqa: BLE001 - report any fetch or parse failure plainly
@@ -76,6 +81,7 @@ repo = re.compile(r"^https://github[.]com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/?$")
 for t in catalog["templates"]:
     if not repo.match(t.get("repo", "")) or not t.get("githubUrl", "").startswith(t["repo"].rstrip("/") + "/tree/"):
         sys.exit(f"Catalog entry {t.get('id')} would be rejected by the extension.")
+json.dump(catalog, open(copy, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
 print(f"Catalog OK: {len(ids)} templates ({', '.join(ids)})")
 PY
 
@@ -103,6 +109,15 @@ for old, new in replacements:
 open(target, "w", encoding="utf-8").write(text)
 PY
   echo "Patched: $bundle"
+  # The extension shows its bundled catalog on the first open after each reload and swaps in the
+  # remote one only on a later open (the fetch runs in the background). Replace the bundled copy
+  # too, so the first open already lists these templates.
+  bundled="$(dirname "$(dirname "$bundle")")/ai-foundry/templates/solution/solution-template-catalog.json"
+  if [[ -f "$bundled" ]]; then
+    [[ -f "$bundled.orig" ]] || cp "$bundled" "$bundled.orig"
+    cp "$CATALOG_COPY" "$bundled"
+    echo "Replaced bundled catalog: $bundled"
+  fi
 done
 
 echo "Reload VS Code (Developer: Reload Window), then open Create Agent > Solution templates."

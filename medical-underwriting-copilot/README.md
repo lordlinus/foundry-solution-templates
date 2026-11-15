@@ -80,6 +80,9 @@ on the `PATH` (for the post-provision hook). The deploying identity needs:
 - permission to create Microsoft Entra app registrations;
 - quota for 30K TPM each of `gpt-5.4-mini` and `gpt-5-mini` GlobalStandard.
 
+If Azure AI Search has no capacity in your region (`InsufficientResourcesAvailable`),
+run `azd env set AZURE_SEARCH_LOCATION <other-region>` and `azd up` again.
+
 Choose a region that supports Foundry Hosted Agents, Content Understanding, and
 both models.
 
@@ -101,7 +104,8 @@ agent and the web app, and prints `WEB_URL`. If the hook reports that
 ## Try it
 
 1. Open `WEB_URL`, sign in, and upload `data/sample-records/sample-02-diabetes.pdf`.
-2. Wait a few minutes. The page shows the run's progress.
+2. Wait two to three minutes. The page shows the run's status; individual tool
+   steps are not visible until the report is ready.
 3. Read the report. Select a `p.N` citation to show that page of the PDF.
 4. Expect the pending urine test to read **Not interpreted** and the
    recommendation to be **Postpone**, citing the pending-investigation guideline.
@@ -129,6 +133,19 @@ az ad app delete --id $(azd env get-value WEB_APP_REGISTRATION_CLIENT_ID)
 
 ## Validation status
 
-Offline checks pass (pytest, ruff, web typecheck, tests and build, Bicep build).
-**This template has not yet been deployed live.** See the open questions in
-[Architecture](docs/architecture.md#verify-on-first-deployment).
+Validated live on 2026-11-15 (East US 2; Search in West US 2), then torn down:
+
+- **Sample 02, in a browser:** upload to report in 158 seconds.
+  - The recommendation was **Postpone** for the pending urine test, and the
+    pending result reads "Not interpreted".
+  - 18 page citations rendered, and the second-model review passed after one
+    revision.
+  - The OCR tab listed 8 low-confidence values.
+- **Sample 01, through the deployed web app's own managed identity:** **Rated**
+  in 111 seconds, and the review passed first time.
+- **Isolation:** a second user gets 404 for the first user's case and PDF.
+- **Sign-in:** the public endpoint returns 401 without sign-in, including when a
+  spoofed principal header is sent.
+
+See [Architecture](docs/architecture.md#live-validation-findings) for what the
+live run changed.

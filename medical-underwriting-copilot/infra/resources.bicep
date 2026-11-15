@@ -1,5 +1,6 @@
 param environmentName string
 param location string
+param searchLocation string
 param foundryAccountName string
 param foundryProjectName string
 param foundryProjectEndpoint string
@@ -31,7 +32,7 @@ resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-0
 
 resource search 'Microsoft.Search/searchServices@2023-11-01' = {
   name: 'srch-${token}'
-  location: location
+  location: searchLocation
   tags: tags
   sku: { name: 'basic' }
   properties: {
@@ -52,20 +53,40 @@ resource searchConnection 'Microsoft.CognitiveServices/accounts/projects/connect
     metadata: {
       ApiType: 'Azure'
       ResourceId: search.id
-      location: location
+      location: searchLocation
     }
   }
 }
 
-resource projectSearchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: search
-  name: guid(search.id, foundryProject.id, roles.searchIndexDataReader)
-  properties: {
-    principalId: foundryProject.identity.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.searchIndexDataReader)
+// The hosted Azure AI Search tool queries with Entra ID. Microsoft Learn ("Connect an Azure AI Search
+// index to Foundry agents") requires Search Index Data Contributor and Search Service Contributor; it
+// names the project identity in one place and the account identity in another, so both get them.
+// Index Data Reader alone fails every query with "tool_user_error".
+var searchToolRoles = [roles.searchIndexDataContributor, roles.searchServiceContributor]
+
+resource projectSearchAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in searchToolRoles: {
+    scope: search
+    name: guid(search.id, foundryProject.id, role)
+    properties: {
+      principalId: foundryProject.identity.principalId
+      principalType: 'ServicePrincipal'
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+    }
   }
-}
+]
+
+resource accountSearchAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in searchToolRoles: {
+    scope: search
+    name: guid(search.id, foundryAccount.id, role)
+    properties: {
+      principalId: foundryAccount.identity.principalId
+      principalType: 'ServicePrincipal'
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', role)
+    }
+  }
+]
 
 // The deploying identity creates the index and uploads the guidelines (scripts/seed_guidelines.py).
 resource deployerIndexWriter 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -122,6 +143,44 @@ resource webFoundryAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' =
     principalId: webIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.azureAiUser)
+  }
+}
+
+// Calls that carry x-ms-user-identity (per-user sessions) need a data action that no built-in role
+// includes. Without it every delegated call fails 403 "Caller is not authorized to delegate to another user".
+resource impersonationRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: guid(foundryAccount.id, 'UserIdentityImpersonation')
+  scope: foundryAccount
+  properties: {
+    roleName: 'Foundry Hosted Agent User Impersonation (${foundryAccount.name})'
+    description: 'Lets a trusted middle tier scope hosted-agent sessions to its own end users.'
+    assignableScopes: [foundryAccount.id]
+    permissions: [
+      {
+        actions: []
+        dataActions: ['Microsoft.CognitiveServices/accounts/AIServices/agents/endpoints/UserIdentityImpersonation/action']
+      }
+    ]
+  }
+}
+
+resource webImpersonation 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: foundryAccount
+  name: guid(foundryAccount.id, webIdentity.id, 'UserIdentityImpersonation')
+  properties: {
+    principalId: webIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: impersonationRole.id
+  }
+}
+
+// The deploying user gets the same right so the web app can run locally (README "Run locally").
+resource deployerImpersonation 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  scope: foundryAccount
+  name: guid(foundryAccount.id, principalId, 'UserIdentityImpersonation')
+  properties: {
+    principalId: principalId
+    roleDefinitionId: impersonationRole.id
   }
 }
 

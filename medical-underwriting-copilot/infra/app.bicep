@@ -4,6 +4,8 @@ targetScope = 'subscription'
 param environmentName string
 @description('Region for the app resources.')
 param location string
+@description('Region for Azure AI Search. Empty means the deployment region; set another region when that one has no Search capacity.')
+param searchLocation string = ''
 @description('Resource group created by the Foundry layer.')
 param resourceGroupName string
 param foundryAccountName string
@@ -24,6 +26,7 @@ module resources 'resources.bicep' = {
   params: {
     environmentName: environmentName
     location: location
+    searchLocation: empty(searchLocation) ? location : searchLocation
     foundryAccountName: foundryAccountName
     foundryProjectName: foundryProjectName
     foundryProjectEndpoint: foundryProjectEndpoint

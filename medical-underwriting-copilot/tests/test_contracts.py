@@ -75,3 +75,22 @@ def test_no_custom_up_workflow_and_hook_scripts_exist():
 def test_requires_projects_extension_not_standalone_foundry():
     extensions = MANIFEST["requiredVersions"]["extensions"]
     assert "azure.ai.projects" in extensions and "microsoft.foundry" not in extensions
+
+
+def test_web_identity_can_delegate_users():
+    # Found live: without this data action every x-ms-user-identity call fails with 403.
+    bicep = (ROOT / "infra/resources.bicep").read_text()
+    assert "agents/endpoints/UserIdentityImpersonation/action" in bicep
+    assert (
+        "principalId: webIdentity.properties.principalId\n    principalType: 'ServicePrincipal'\n    roleDefinitionId: impersonationRole.id"
+        in bicep
+    )
+
+
+def test_search_tool_identities_have_documented_roles():
+    # Found live: Search Index Data Reader alone fails every hosted search with tool_user_error.
+    bicep = (ROOT / "infra/resources.bicep").read_text()
+    assert "searchToolRoles = [roles.searchIndexDataContributor, roles.searchServiceContributor]" in bicep
+    for principal in ("foundryProject.identity.principalId", "foundryAccount.identity.principalId"):
+        assert f"principalId: {principal}" in bicep
+    assert "location: searchLocation" in bicep

@@ -54,8 +54,8 @@ page shows coarse status rather than live per-step progress while it runs.
 |---|---|
 | Internet → web app | Entra sign-in; the app registration has no client secret (the web app's managed identity is its federated credential). |
 | User → user | One agent session per signed-in user; every session call carries that user's `x-ms-user-identity`. Case and run IDs are resolved inside the user's own session. |
-| Web app → Foundry | Managed identity with **Azure AI User** on the Foundry account (sessions, session files, responses, Content Understanding). |
-| Agent → guidelines | Hosted search tool through a project connection with Entra ID auth; the project identity has **Search Index Data Reader**. Search has local (key) auth disabled. |
+| Web app → Foundry | Managed identity with **Azure AI User** on the Foundry account (sessions, session files, responses, Content Understanding), plus a custom role with the `.../agents/endpoints/UserIdentityImpersonation/action` data action. No built-in role has it, and without it every call that carries `x-ms-user-identity` fails with 403. |
+| Agent → guidelines | Hosted search tool through a project connection with Entra ID auth. The project and account identities have **Search Index Data Contributor** and **Search Service Contributor**, as Microsoft Learn requires; Index Data Reader alone fails with `tool_user_error`. Search has local (key) auth disabled. |
 | Agent → MCP servers | Public third-party endpoints, called by the Foundry service. Disable with `MEDICAL_MCP_ENABLED=false`. |
 | Telemetry | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` keeps record text out of traces. |
 
@@ -67,24 +67,29 @@ descriptions about 100 each. The skill bodies (about 870 tokens together) load
 only when the agent asks for them. The reviewer's rubric (about 220 tokens) is
 sent once per review.
 
-## Verify on first deployment
+## Live validation findings
 
-These depend on live service behavior that offline checks cannot prove:
+Deployed on 2026-11-15 to East US 2 (Search in West US 2), with azd 1.37.3,
+`azure.ai.projects` 1.1.0 and `azure.ai.agents` 1.1.0. The live run used `gpt-5`
+as the drafter because the test subscription had no `gpt-5.4-mini` quota.
 
-- The hosted Azure AI Search tool authenticates with the **project** managed
-  identity through the `AAD` connection (the Bicep grants that identity
-  Search Index Data Reader). If the hosted agent's own identity is used
-  instead, grant it the same role.
-- The hosted MCP tools accept the custom `User-Agent` header, and the
-  third-party ICD-10 and PubMed endpoints are reachable from Foundry.
-- `AZURE_PRINCIPAL_ID` is populated by azd for the Bicep layer (otherwise set it
-  as the README describes).
-- **Azure AI User** at account scope is enough for Content Understanding
-  `prebuilt-layout` and for the session files API with `x-ms-user-identity`.
-- `prebuilt-layout` needs no default model deployments on the account in the
-  chosen region.
-- The background response output lists tool calls while the run is in
-  progress (the progress list may stay empty until completion).
-- Agent Framework's `SkillsProvider` works inside the hosted runtime with
-  approvals disabled, and the drafter fits the full report in one
-  `submit_report` call for a 3-page record.
+- **Delegating users needs a custom role.** `x-ms-user-identity` calls failed
+  with 403 "Caller is not authorized to delegate to another user" until the web
+  identity (and, for local runs, the deployer) had the `UserIdentityImpersonation`
+  data action. The Bicep now creates and assigns it.
+- **The hosted Search tool needs contributor roles.** With Index Data Reader
+  only, every search failed with `tool_user_error`. It worked once the
+  documented roles propagated, which took about a minute.
+- **Search capacity can run out per region.** East US 2 returned
+  `InsufficientResourcesAvailable`; set `AZURE_SEARCH_LOCATION` to place Search
+  elsewhere.
+- **These worked as designed:** Content Understanding `prebuilt-layout` with
+  Azure AI User and no default model deployments; skills loading on demand in the
+  hosted runtime; the public ICD-10 and PubMed MCP servers with the custom
+  `User-Agent`; the full report in one `submit_report` call; and the review loop
+  (one draft was rejected and its revision passed).
+- **Progress is coarse.** The background response lists no tool steps until the
+  run completes, so the page shows only the run status while it works.
+- **Still unverified:** whether azd fills `AZURE_PRINCIPAL_ID` on its own. The
+  test set it explicitly, as the README describes.
+

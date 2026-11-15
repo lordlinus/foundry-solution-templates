@@ -167,3 +167,15 @@ az ad app delete --id (azd env get-value WEB_APP_REGISTRATION_CLIENT_ID)
 
 `azd down` does not delete the Entra app registration, so the second command
 removes it.
+
+`azd down` doesn't remove the Microsoft Entra agent identities that Foundry creates for agents
+(display names end in `AgentIdentity`, tagged with the project name). After the resource group is
+gone, list and delete the ones for this project (from a bash shell):
+
+```bash
+PROJECT=$(azd env get-value AZURE_AI_PROJECT_NAME)
+az rest --method get --headers ConsistencyLevel=eventual \
+  --url "https://graph.microsoft.com/beta/servicePrincipals?\$filter=endswith(displayName,'AgentIdentity')&\$count=true&\$select=id,displayName,tags&\$top=200" \
+  --query "value[?contains(tags, 'projectName:$PROJECT')].[id, displayName]" -o tsv
+az rest --method delete --url "https://graph.microsoft.com/beta/servicePrincipals/<id>"   # for each id listed
+```

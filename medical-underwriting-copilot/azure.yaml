@@ -63,7 +63,8 @@ services:
       # Public ICD-10 and PubMed MCP servers. Set to false to keep all traffic inside Azure.
       - name: MEDICAL_MCP_ENABLED
         value: ${MEDICAL_MCP_ENABLED=true}
-      # Medical records must not reach traces: keep prompt and response text out of telemetry.
+      # Keeps record text out of the agent container's spans. The Foundry service's own spans still
+      # record prompts and replies while Application Insights is connected (docs/architecture.md).
       - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
         value: 'false'
     codeConfiguration:

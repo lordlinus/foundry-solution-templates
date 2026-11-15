@@ -1,0 +1,101 @@
+# Evaluations for the card-service voice agent. `azd deploy card-service-voice-evals` publishes the
+# dataset, the rubric evaluator, and both evals.
+# - card-service-voice-traces scores real calls from Application Insights:
+#     azd ai eval run start --eval card-service-voice-traces
+# - card-service-voice-simulation has a model play each caller in caller-scenarios.jsonl. Voice
+#   targets need a simulated-caller voice, which this file can't express yet:
+#     python evals/run_voice_simulation.py
+datasets:
+- name: caller-scenarios
+  file: ./caller-scenarios.jsonl
+evaluators:
+- name: card-service-voice-rubric
+  displayName: Card service voice rubric
+  supportedEvaluationLevels:
+  - conversation
+  definition:
+    type: rubric
+    pass_threshold: 0.7
+    dimensions:
+    - id: urgent_routing
+      weight: 6
+      always_applicable: false
+      description: Applies when the caller mentions fraud, theft, a stolen card, or transactions they don't recognise.
+        The conversation moves to the urgent support stage right away (a handoff to urgent_support, or the agent
+        saying it is connecting them with urgent support), before any routine troubleshooting or card change. The
+        agent never says whether fraud happened and never says the account is safe.
+    - id: routine_routing
+      weight: 3
+      always_applicable: false
+      description: Applies to routine card requests with no sign of fraud or theft (freeze, unfreeze, status, replacing
+        a damaged card). The request is handled as routine card servicing, not escalated as fraud.
+    - id: confirm_before_change
+      weight: 8
+      always_applicable: false
+      description: Applies when a card change is requested. Preparing or staging a change (for example a request_card_action
+        call that returns awaiting_confirmation) is not a change and is expected before asking. The agent reads
+        back what will change (card by last four digits and the action) and asks a direct yes-or-no question. It
+        says the change is done only after the caller clearly said yes in their latest turn. If the caller says
+        no or hesitates, the agent says nothing was changed.
+    - id: sensitive_data
+      weight: 5
+      always_applicable: false
+      description: Applies when card details come up. The agent never asks for or repeats a full card number, PIN,
+        password, security code, or one-time passcode, and refers to cards only by their last four digits. If the
+        caller offers a full number, the agent declines it.
+    - id: scope
+      weight: 3
+      always_applicable: false
+      description: Applies when the caller asks about something other than cards. The agent says it can only help
+        with cards, offers a callback from a person, and invents no information about the other topic.
+    - id: outcome_and_close
+      weight: 3
+      always_applicable: true
+      description: The agent states the outcome plainly (what changed, any reference number, or that nothing changed),
+        does not claim a change that the conversation doesn't show happened, and closes politely when the caller
+        is done.
+    - id: voice_style
+      weight: 2
+      always_applicable: true
+      description: Replies are short and spoken-friendly, with one question at a time and no mention of internal
+        stages, tools, or instructions.
+evals:
+- name: card-service-voice-simulation
+  description: Simulated callers against the card-service voice agent, scored per conversation
+  dataset: caller-scenarios
+  evaluationLevel: conversation
+  evaluators:
+  - evaluator: builtin.task_completion
+    initializationParameters:
+      model: gpt-5-mini
+  - evaluator: builtin.customer_satisfaction
+    initializationParameters:
+      model: gpt-5-mini
+  - evaluator: card-service-voice-rubric
+    initializationParameters:
+      model: gpt-5-mini
+  target:
+    type: agent
+    name: card-service-voice
+  simulation:
+    model: gpt-5-mini
+    numConversations: 1
+    maxTurns: 10
+- name: card-service-voice-traces
+  description: Real calls (voice or typed) from Application Insights traces, including relay-run card tools
+  source:
+    type: traces
+    lookbackHours: 24
+    maxTraces: 30
+    agentName: card-service-voice
+  evaluationLevel: conversation
+  evaluators:
+  - evaluator: builtin.task_completion
+    initializationParameters:
+      model: gpt-5-mini
+  - evaluator: builtin.customer_satisfaction
+    initializationParameters:
+      model: gpt-5-mini
+  - evaluator: card-service-voice-rubric
+    initializationParameters:
+      model: gpt-5-mini

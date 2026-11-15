@@ -56,3 +56,35 @@ jobs:
       - run: az bicep build --file infra/app.bicep --stdout > /dev/null
       - working-directory: medical-underwriting-copilot/src/web
         run: npm ci && npm run typecheck && npm test && npm run build
+
+  teams-m365-hosted-agent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: teams-m365-hosted-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check . && ruff format --check . && pytest
+
+  voice-multi-agent-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: voice-multi-agent-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check . && ruff format --check . && pytest
+      - run: az bicep build --file infra/app.bicep --stdout > /dev/null
+      - working-directory: voice-multi-agent-service/src/web
+        run: npm ci && npm test

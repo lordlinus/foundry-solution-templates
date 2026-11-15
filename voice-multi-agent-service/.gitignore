@@ -1,0 +1,10 @@
+*.tsbuildinfo
+.azure/
+.env
+.next/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+azd-*.log
+node_modules/

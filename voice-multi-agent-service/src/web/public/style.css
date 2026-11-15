@@ -1,0 +1,22 @@
+body { font-family: system-ui, sans-serif; margin: 0; color: #1b1b1b; }
+header { padding: 12px 24px; border-bottom: 1px solid #ddd; }
+header h1 { margin: 0; font-size: 20px; }
+header p { margin: 4px 0 0; color: #555; }
+main { display: grid; grid-template-columns: 1fr 280px; gap: 24px; padding: 16px 24px; }
+.controls { display: flex; gap: 8px; align-items: center; }
+button { padding: 8px 16px; border: 0; border-radius: 6px; background: #0f6cbd; color: #fff; cursor: pointer; }
+button.secondary { background: #e0e0e0; color: #1b1b1b; }
+button:disabled { opacity: 0.5; cursor: default; }
+#status { color: #555; margin-left: 8px; }
+.stages { display: flex; gap: 8px; list-style: none; padding: 0; margin: 16px 0; }
+.stages li { padding: 4px 10px; border-radius: 12px; background: #f0f0f0; font-size: 13px; }
+.stages li.active { background: #0f6cbd; color: #fff; }
+.transcript { border: 1px solid #ddd; border-radius: 8px; padding: 12px; height: 50vh; overflow-y: auto; }
+.turn { margin: 6px 0; }
+.turn .who { font-size: 12px; color: #666; }
+.turn.user { text-align: right; }
+.turn.system { color: #8a5a00; font-size: 13px; }
+form { display: flex; gap: 8px; margin-top: 8px; }
+form input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
+aside ul { padding-left: 18px; font-size: 14px; }
+aside h2 { font-size: 15px; margin: 16px 0 6px; }

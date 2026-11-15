@@ -17,6 +17,14 @@ Every template must:
   hosts before the nested provision step.
 - **Be keyless by default.** Managed identities and Entra ID; no client secrets
   or API keys in source, parameters, or outputs.
+- **Be honest about trace content.** Set
+  `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` for the agent container, and
+  document that the Foundry service's own spans still record prompts and replies whenever the
+  project has Application Insights (the `microsoft.foundry` layer connects it). Never claim
+  that content stays out of telemetry.
+- **Clean up agent identities.** `azd down --purge` leaves each agent's Microsoft
+  Entra agent identity behind. Every template's "Clean up" section deletes the
+  identities tagged with its project name.
 - **Pin dependencies** with `==` (Python) and a lockfile (Node).
 - **Include** `README.md` (with "What this template is for / not for"),
   `AGENTS.md`, `docs/architecture.md`, `docs/cost.md`, and offline tests.

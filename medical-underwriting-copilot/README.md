@@ -40,6 +40,11 @@ privacy and compliance requirements.
 Review [Cost planning](docs/cost.md) before provisioning: Azure AI Search Basic
 is an always-on cost of about USD 74 a month.
 
+**Trace content:** the project's Application Insights receives prompts and replies, including
+OCR'd record text, from the Foundry service's own traces. Before you use real medical records,
+protect the Log Analytics tables or disconnect Application Insights; see
+[Architecture](docs/architecture.md#trace-content).
+
 ## Architecture
 
 ```mermaid
@@ -130,6 +135,19 @@ agent and the web app, and prints `WEB_URL`. If the hook reports that
 azd down --purge
 az ad app delete --id $(azd env get-value WEB_APP_REGISTRATION_CLIENT_ID)
 ```
+
+`azd down` doesn't remove the Microsoft Entra agent identities that Foundry creates for agents
+(display names end in `AgentIdentity`, tagged with the project name). After the resource group is
+gone, list and delete the ones for this project (from a bash shell):
+
+```bash
+PROJECT=$(azd env get-value AZURE_AI_PROJECT_NAME)
+az rest --method get --headers ConsistencyLevel=eventual \
+  --url "https://graph.microsoft.com/beta/servicePrincipals?\$filter=endswith(displayName,'AgentIdentity')&\$count=true&\$select=id,displayName,tags&\$top=200" \
+  --query "value[?contains(tags, 'projectName:$PROJECT')].[id, displayName]" -o tsv
+az rest --method delete --url "https://graph.microsoft.com/beta/servicePrincipals/<id>"   # for each id listed
+```
+
 
 ## Validation status
 

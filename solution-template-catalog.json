@@ -74,6 +74,36 @@
             "ref": "main",
             "path": "medical-underwriting-copilot",
             "readmePath": "README.md"
+        },
+        {
+            "id": "teams-m365-hosted-agent",
+            "title": "Teams and Microsoft 365 Copilot Client for a Hosted Agent",
+            "description": "Demonstrates publishing a Hosted Agent to Microsoft Teams and Microsoft 365 Copilot with Foundry's built-in publishing: no Bot Service resource or gateway, one azd up.",
+            "tags": [
+                "Microsoft Teams",
+                "Microsoft 365 Copilot",
+                "Publishing"
+            ],
+            "repo": "https://github.com/lordlinus/foundry-solution-templates",
+            "githubUrl": "https://github.com/lordlinus/foundry-solution-templates/tree/main/teams-m365-hosted-agent",
+            "ref": "main",
+            "path": "teams-m365-hosted-agent",
+            "readmePath": "README.md"
+        },
+        {
+            "id": "voice-multi-agent-service",
+            "title": "Voice-first Multi-agent Customer Service",
+            "description": "Demonstrates a Foundry voice agent in the browser: triage hands off to a card-services specialist or straight to urgent support on fraud signals, with confirmed, run-once actions and simulated-caller evaluation. Synthetic data.",
+            "tags": [
+                "Voice",
+                "Multi-agent Handoff",
+                "Evaluation"
+            ],
+            "repo": "https://github.com/lordlinus/foundry-solution-templates",
+            "githubUrl": "https://github.com/lordlinus/foundry-solution-templates/tree/main/voice-multi-agent-service",
+            "ref": "main",
+            "path": "voice-multi-agent-service",
+            "readmePath": "README.md"
         }
     ]
 }

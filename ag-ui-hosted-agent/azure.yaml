@@ -35,7 +35,8 @@ services:
     environmentVariables:
       - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
         value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
-      # The hosting layer captures prompt and response text in traces unless this is false.
+      # Keeps prompt and response text out of the agent container's spans. The Foundry service's own
+      # spans still record them while Application Insights is connected (docs/architecture.md).
       - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
         value: 'false'
     codeConfiguration:

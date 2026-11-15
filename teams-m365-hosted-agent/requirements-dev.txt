@@ -1,0 +1,4 @@
+-r src/agent/requirements.txt
+pytest
+pyyaml
+ruff==0.17.5

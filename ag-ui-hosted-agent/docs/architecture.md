@@ -71,7 +71,7 @@ user asks again. For this reason the gateway runs a single replica.
 | Gateway → thread | `authorization_scope_resolver` rejects threads that are not `conv_` IDs (400), unknown conversations (404), and conversations owned by another user (403). Approval state is scoped per user. |
 | Gateway → Foundry | Gateway managed identity with **Azure AI User** on the project only. The web app holds no Foundry role. |
 | Containers → registry | Each app pulls with its own managed identity (**AcrPull**). The registry admin user is disabled. |
-| Traces | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` keeps prompt and response text out of telemetry. |
+| Traces | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` keeps prompt and response text out of the agent container's spans. The Foundry service's own spans (`cloud_RoleName` `responsesapi`) still record prompts and replies whenever the project has Application Insights, which the `microsoft.foundry` layer connects; see [Trace content](#trace-content). |
 
 The gateway trusts `x-user-id` because only apps in the same Container Apps
 environment can reach it. If you add other apps to that environment, or expose
@@ -87,3 +87,26 @@ the gateway, validate an Entra token in the gateway instead.
 `azd deploy` then deploys the hosted agent from source (Foundry builds it with
 `remote_build`) and builds the two container images in the registry with ACR
 Tasks.
+
+## Trace content
+
+Verified live on 2026-11-15: with `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false`,
+no span from the agent container carried message content, but the Foundry service's own
+`invoke_agent` and `chat` spans (`cloud_RoleName` `responsesapi`, `sdkVersion` `aifoundry-v1.0`)
+contained the full `gen_ai.input.messages` and `gen_ai.output.messages`. `ENABLE_SENSITIVE_DATA`
+and `AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED` did not change that.
+
+According to [Foundry tracing and data handling](https://learn.microsoft.com/azure/foundry/observability/concepts/trace-data),
+tracing records prompts and model inputs and outputs whenever the project is connected to
+Application Insights, and disconnecting Application Insights is the only way to stop it. Control
+who can read it instead: grant Log Analytics Reader sparingly, set the Log Analytics tables to
+[protected](https://learn.microsoft.com/azure/azure-monitor/logs/protected-tables-configure) so
+reading them needs Privileged Monitoring Data Reader, and set retention to what you need.
+
+Check what your project records:
+
+```kusto
+dependencies
+| where timestamp > ago(1h)
+| summarize spans = count(), with_content = countif(isnotempty(customDimensions["gen_ai.input.messages"])) by cloud_RoleName
+```

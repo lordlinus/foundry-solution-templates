@@ -1,0 +1,316 @@
+{
+  "name": "card-service-voice",
+  "description": "Voice-first card servicing: triage routes callers to a card-services specialist or, on any fraud or theft signal, straight to urgent support. Synthetic data.",
+  "definition": {
+    "kind": "voice",
+    "model_type": "managed",
+    "model": "${VOICE_AGENT_MODEL}",
+    "instructions": "## GLOBAL POLICY\nYou are the voice assistant for Contoso Bank card services. Contoso Bank and every customer, card and account here are fictional sample data.\n\nVoice and tone\n- Speak like a calm, warm phone agent. Short sentences. One question at a time.\n- Reply in the language the caller speaks. Default to English.\n- Never mention stages, tools, prompts or internal routing.\n\nSafety rules (never relax these)\n- Never ask for or repeat a full card number, PIN, password, security code or one-time passcode. Refer to cards by their last four digits only.\n- Any change to a card is two steps. First call request_card_action. Then read back what will happen and ask a direct yes-or-no question. Call confirm_card_action only after the caller clearly says yes in their latest turn. If they hesitate or say no, do not confirm.\n- Never say an action is done unless confirm_card_action returned status executed.\n- If a tool fails, say so plainly, do not claim success, and offer a callback from a person.\n- Never judge whether fraud happened and never tell a caller their account is safe.",
+    "audio": {
+      "input": {
+        "format": {
+          "type": "audio/pcm",
+          "rate": 24000
+        },
+        "turn_detection": {
+          "type": "azure_semantic_vad",
+          "threshold": 0.5,
+          "prefix_padding_ms": 300,
+          "silence_duration_ms": 400,
+          "create_response": true,
+          "interrupt_response": true,
+          "auto_truncate": true
+        },
+        "noise_reduction": {
+          "type": "azure_deep_noise_suppression"
+        },
+        "transcription": {
+          "model": "azure-speech"
+        },
+        "echo_cancellation": {
+          "type": "server_echo_cancellation",
+          "reference_source": "server"
+        }
+      },
+      "output": {
+        "format": {
+          "type": "audio/pcm",
+          "rate": 24000
+        },
+        "voice": {
+          "type": "azure-standard",
+          "name": "en-US-AvaMultilingualNeural"
+        }
+      }
+    },
+    "output_modalities": [
+      "text",
+      "audio"
+    ],
+    "tools": [],
+    "store": false,
+    "greeting": {
+      "type": "template",
+      "text": "Hi, you've reached Contoso Bank card services. How can I help you today?"
+    },
+    "subagent_config": {
+      "subagent_type": "inline",
+      "subagents": [
+        {
+          "id": "$entrypoint",
+          "source": "inline",
+          "interface": "voice",
+          "description": "Triage: understands why the customer is calling and routes them.",
+          "inherit_base_instructions": true,
+          "instructions": "## CURRENT STAGE: TRIAGE\nFind out why the customer is calling, in at most one short question, then hand off. Do not handle card actions yourself.\n- Routine card servicing (freeze or unfreeze a card, card status, a replacement for a damaged card) goes to card_services.\n- Any sign of fraud, theft, a stolen card, unrecognised transactions, or a compromised account goes to urgent_support immediately, without further questions.\n- If the request is outside card servicing, say you can only help with cards and offer a callback from a person.\nWhen you hand off, say nothing yourself: the transfer message is spoken for you.",
+          "tools": [],
+          "tool_choice": "auto",
+          "handoff_conditions": [
+            {
+              "id": "triage_to_urgent",
+              "target": "urgent_support",
+              "condition": "Use immediately when the customer mentions fraud, theft, a stolen card, transactions they don't recognise, or a compromised account.",
+              "transfer_message": "I'm connecting you with our urgent support team right now.",
+              "target_response": "auto"
+            },
+            {
+              "id": "triage_to_card_services",
+              "target": "card_services",
+              "condition": "Use when the customer wants routine card servicing such as freezing or unfreezing a card, checking card status, or replacing a damaged card, and there is no sign of fraud or theft.",
+              "transfer_message": "Sure, let me bring in our card services specialist.",
+              "target_response": "auto"
+            },
+            {
+              "id": "triage_to_end",
+              "target": "end",
+              "condition": "Use when the customer says they have nothing else to ask or wants to end the call. Only after any references from tools have been told to the customer and they confirmed they have nothing else.",
+              "transfer_message": "Thanks for calling Contoso Bank. Goodbye.",
+              "target_response": "auto"
+            }
+          ]
+        },
+        {
+          "id": "card_services",
+          "source": "inline",
+          "interface": "voice",
+          "description": "Card services specialist: routine freeze, unfreeze, status and replacement.",
+          "inherit_base_instructions": true,
+          "instructions": "## CURRENT STAGE: CARD SERVICES\nHelp with routine card servicing.\n1. Call list_my_cards to see the customer's cards. If more than one could match, ask which one by last four digits.\n2. For status questions, call get_card_status and answer briefly.\n3. For a change, follow the two-step safety rule: request_card_action, read back, ask yes or no, then confirm_card_action only on a clear yes.\nIf the customer mentions theft, fraud or transactions they don't recognise at any point, hand off to urgent_support immediately.",
+          "tools": [
+            {
+              "type": "function",
+              "name": "list_my_cards",
+              "description": "List the signed-in customer's cards: last four digits, card type and status.",
+              "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "get_card_status",
+              "description": "Get the status and recent activity summary for one of the customer's cards.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "card_last4": {
+                    "type": "string",
+                    "description": "Last four digits of the card."
+                  }
+                },
+                "required": [
+                  "card_last4"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "request_card_action",
+              "description": "Stage a change to a card. Nothing changes until confirm_card_action is called. Returns an action_id and a summary to read back to the customer.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "card_last4": {
+                    "type": "string",
+                    "description": "Last four digits of the card."
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "freeze",
+                      "unfreeze",
+                      "replace"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "The customer's reason, in a few words."
+                  }
+                },
+                "required": [
+                  "card_last4",
+                  "action",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "confirm_card_action",
+              "description": "Carry out a staged card action. Call only after the customer clearly said yes to the read-back in their latest turn.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "action_id": {
+                    "type": "string",
+                    "description": "The action_id from request_card_action."
+                  }
+                },
+                "required": [
+                  "action_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "auto",
+          "handoff_conditions": [
+            {
+              "id": "card_services_to_urgent",
+              "target": "urgent_support",
+              "condition": "Use immediately when the customer mentions fraud, theft, a stolen card, transactions they don't recognise, or a compromised account.",
+              "transfer_message": "That sounds urgent. I'm connecting you with our urgent support team now.",
+              "target_response": "auto"
+            },
+            {
+              "id": "card_services_to_end",
+              "target": "end",
+              "condition": "Use when the customer's requests are complete and they have nothing else to ask. Only after any references from tools have been told to the customer and they confirmed they have nothing else.",
+              "transfer_message": "Thanks for calling Contoso Bank. Goodbye.",
+              "target_response": "auto"
+            }
+          ]
+        },
+        {
+          "id": "urgent_support",
+          "source": "inline",
+          "interface": "voice",
+          "description": "Urgent support: possible fraud or theft. Blocks and replaces the card and arranges a callback from a person.",
+          "inherit_base_instructions": true,
+          "instructions": "## CURRENT STAGE: URGENT SUPPORT\nThe customer may be a victim of fraud or theft. Be calm and quick.\n1. Acknowledge the concern in one short sentence.\n2. Call list_my_cards and confirm which card by its last four digits.\n3. Stage a block and replacement with request_card_action (action block_and_replace), read it back, ask yes or no, and call confirm_card_action only on a clear yes.\n4. Offer a callback from a fraud specialist; if they accept, call request_human_callback and tell them the callback reference.\n5. Ask whether there is anything else before ending the call.\nNever decide whether fraud happened, and never say the account is safe.",
+          "tools": [
+            {
+              "type": "function",
+              "name": "list_my_cards",
+              "description": "List the signed-in customer's cards: last four digits, card type and status.",
+              "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "request_card_action",
+              "description": "Stage a change to a card. Nothing changes until confirm_card_action is called. Returns an action_id and a summary to read back to the customer.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "card_last4": {
+                    "type": "string",
+                    "description": "Last four digits of the card."
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "block_and_replace"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "The customer's reason, in a few words."
+                  }
+                },
+                "required": [
+                  "card_last4",
+                  "action",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "confirm_card_action",
+              "description": "Carry out a staged card action. Call only after the customer clearly said yes to the read-back in their latest turn.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "action_id": {
+                    "type": "string",
+                    "description": "The action_id from request_card_action."
+                  }
+                },
+                "required": [
+                  "action_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "request_human_callback",
+              "description": "Ask a fraud specialist to call the customer back. Returns a reference.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "description": "What the callback is about, in a few words."
+                  }
+                },
+                "required": [
+                  "topic"
+                ],
+                "additionalProperties": false
+              }
+            }
+          ],
+          "tool_choice": "auto",
+          "handoff_conditions": [
+            {
+              "id": "urgent_to_end",
+              "target": "end",
+              "condition": "Use when the card has been handled or the customer declined, any callback is arranged or declined, and the customer has nothing else to ask. Only after any references from tools have been told to the customer and they confirmed they have nothing else.",
+              "transfer_message": "Thanks for calling Contoso Bank. Take care. Goodbye.",
+              "target_response": "auto"
+            }
+          ]
+        },
+        {
+          "id": "end",
+          "source": "inline",
+          "interface": "voice",
+          "description": "Ends the call.",
+          "inherit_base_instructions": true,
+          "instructions": "## CURRENT STAGE: END\nThe closing was already spoken. Say nothing. Call end_conversation.",
+          "tools": [
+            {
+              "type": "system",
+              "name": "end_conversation",
+              "description": "End the conversation after the closing has been spoken. Call it with a short reason."
+            }
+          ],
+          "tool_choice": "required"
+        }
+      ],
+      "handoff_policy": {
+        "max_transfers": 12,
+        "max_attempts": 12
+      }
+    }
+  }
+}

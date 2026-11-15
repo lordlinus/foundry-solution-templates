@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+requiredVersions:
+  azd: '>=1.32.0'
+  extensions:
+    azure.ai.projects: '>=1.1.0'
+    azure.ai.evaluations: '>=1.0.0-beta.2'
+name: voice-multi-agent-service
+metadata:
+  template: voice-multi-agent-service@v1
+hooks:
+  # Publishes agent/voice-agent.json as a new version of the voice agent. The azd agent
+  # extension cannot deploy kind: voice agents yet, so a script calls the agents REST API.
+  postprovision:
+    posix:
+      shell: sh
+      run: python3 scripts/publish_voice_agent.py
+    windows:
+      shell: pwsh
+      run: python scripts/publish_voice_agent.py
+services:
+  ai-project:
+    host: azure.ai.project
+    # The voice agent uses a service-managed realtime model, so it needs no deployment.
+    # This deployment is only the evaluation judge and the simulated caller (see evals/).
+    deployments:
+      - name: gpt-5-mini
+        model:
+          format: OpenAI
+          name: gpt-5-mini
+          version: '2025-08-07'
+        sku:
+          name: GlobalStandard
+          capacity: 30
+  # Conversation simulation eval for the voice agent (evals/azure.eval.yaml). `azd deploy`
+  # registers it; `azd ai eval run` runs it.
+  card-service-voice-evals:
+    host: azure.ai.eval
+    $ref: ./evals/azure.eval.yaml
+    uses:
+      - ai-project
+  web:
+    host: containerapp
+    project: src/web
+    language: js
+    resourceGroup: ${AZURE_FOUNDRY_RESOURCE_GROUP}
+    docker:
+      remoteBuild: true
+infra:
+  layers:
+    - provider: microsoft.foundry
+      path: infra-foundry
+      name: foundry
+    - provider: bicep
+      path: infra
+      module: app
+      name: app
+      scope: subscription
+      dependsOn:
+        - foundry

@@ -1,0 +1,3 @@
+pytest
+pyyaml
+ruff==0.17.5

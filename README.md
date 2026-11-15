@@ -14,6 +14,8 @@ so every template here can be listed in the Foundry Toolkit for VS Code
 |---|---|---|
 | [AG-UI Web Client for a Hosted Agent](ag-ui-hosted-agent/) | A CopilotKit browser chat for a Hosted Agent over AG-UI, with Entra sign-in, per-user threads, and human approval of agent actions. | Validated live. Proposed upstream in [microsoft/Foundry-Agent-Solution-Templates#20](https://github.com/microsoft/Foundry-Agent-Solution-Templates/pull/20). |
 | [Medical underwriting copilot](medical-underwriting-copilot/) | Scanned medical records → OCR → a grounded draft underwriting report, audited by a second model and reviewed beside the source. Synthetic data. | Validated live (2026-11-15). |
+| [Voice-first multi-agent customer service](voice-multi-agent-service/) | A Foundry voice agent in the browser: triage hands off to card services or urgent support, with confirmed, run-once actions and simulated-caller evaluation. Synthetic data. | Validated live (2026-11-15); multi-turn voice to be checked with a real microphone. |
+| [Teams and Microsoft 365 Copilot client](teams-m365-hosted-agent/) | The same claims-triage agent published to Microsoft Teams and Microsoft 365 Copilot with Foundry's built-in publishing: no Bot Service resource or gateway. | Validated live in Microsoft 365 Copilot (2026-11-15): tools, approve and deny. |
 | Claims analyst on BYO-AKS | A hosted agent on your own AKS cluster with Kata-isolated sessions, plus its CopilotKit web app. | Planned; BYO-AKS is in private preview |
 
 ## Use a template

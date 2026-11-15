@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+requiredVersions:
+  azd: '>=1.32.0'
+  extensions:
+    azure.ai.agents: '>=1.0.0'
+    azure.ai.projects: '>=1.1.0'
+name: teams-m365-hosted-agent
+metadata:
+  template: teams-m365-hosted-agent@v1
+# Publishes the agent to Teams and Microsoft 365 Copilot after each deploy (scripts/publish_m365.py).
+# A project hook (verified to run on azd deploy with azd 1.37.3). azd does not print hook
+# output; run python scripts/publish_m365.py to see the result.
+hooks:
+  postdeploy:
+    posix:
+      shell: sh
+      run: python3 scripts/publish_m365.py
+    windows:
+      shell: pwsh
+      run: python scripts/publish_m365.py
+services:
+  ai-project:
+    host: azure.ai.project
+    deployments:
+      - name: gpt-5.4-mini
+        model:
+          format: OpenAI
+          name: gpt-5.4-mini
+          version: '2026-03-17'
+        sku:
+          name: GlobalStandard
+          capacity: 10
+  claims-triage:
+    host: azure.ai.agent
+    project: src/agent
+    language: python
+    uses: [ai-project]
+    kind: hosted
+    name: claims-triage
+    displayName: Claims Triage Agent
+    description: Triages synthetic insurance claims; escalation requires human approval.
+    protocols:
+      - protocol: responses
+        version: 2.0.0
+    environmentVariables:
+      - name: AZURE_AI_MODEL_DEPLOYMENT_NAME
+        value: ${AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-5.4-mini}
+      # The hosting layer captures prompt and response text in traces unless this is false.
+      - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+        value: 'false'
+      # This keeps prompt and reply text out of the agent container's spans (verified live). The
+      # Foundry service also emits its own spans (cloud_RoleName "responsesapi") that DO contain
+      # prompts and replies whenever the project has Application Insights; no setting turns that
+      # off. See docs/architecture.md, "Trace content".
+    codeConfiguration:
+      dependencyResolution: remote_build
+      runtime: python_3_13
+      entryPoint: main.py
+    container:
+      resources:
+        cpu: '0.5'
+        memory: 1Gi
+infra:
+  layers:
+    - provider: microsoft.foundry
+      path: infra-foundry
+      name: foundry

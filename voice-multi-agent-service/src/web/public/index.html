@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contoso Bank card services (voice)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Contoso Bank card services</h1>
+    <p>Voice demo with synthetic data. Speak, or type below.</p>
+  </header>
+  <main>
+    <section class="call">
+      <div class="controls">
+        <button id="start">Start call</button>
+        <button id="stop" class="secondary" disabled>End call</button>
+        <span id="status" data-testid="status">Idle</span>
+      </div>
+      <ol class="stages" data-testid="stages">
+        <li data-stage="$entrypoint">Triage</li>
+        <li data-stage="card_services">Card services</li>
+        <li data-stage="urgent_support">Urgent support</li>
+      </ol>
+      <div id="transcript" class="transcript" data-testid="transcript" aria-live="polite"></div>
+      <form id="say">
+        <input id="text" placeholder="Type instead of speaking" autocomplete="off" />
+        <button type="submit" class="secondary">Send</button>
+      </form>
+    </section>
+    <aside>
+      <h2>Your cards</h2>
+      <ul id="cards" data-testid="cards"></ul>
+      <h2>Actions</h2>
+      <ul id="actions" data-testid="actions"></ul>
+      <h2>Latency</h2>
+      <p id="latency" data-testid="latency">Speak to measure time to first audio.</p>
+    </aside>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

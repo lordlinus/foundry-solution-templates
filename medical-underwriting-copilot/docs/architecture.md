@@ -57,7 +57,7 @@ page shows coarse status rather than live per-step progress while it runs.
 | Web app → Foundry | Managed identity with **Azure AI User** on the Foundry account (sessions, session files, responses, Content Understanding), plus a custom role with the `.../agents/endpoints/UserIdentityImpersonation/action` data action. No built-in role has it, and without it every call that carries `x-ms-user-identity` fails with 403. |
 | Agent → guidelines | Hosted search tool through a project connection with Entra ID auth. The project and account identities have **Search Index Data Contributor** and **Search Service Contributor**, as Microsoft Learn requires; Index Data Reader alone fails with `tool_user_error`. Search has local (key) auth disabled. |
 | Agent → MCP servers | Public third-party endpoints, called by the Foundry service. Disable with `MEDICAL_MCP_ENABLED=false`. |
-| Telemetry | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` keeps record text out of traces. |
+| Telemetry | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` keeps record text out of the agent container's spans. The Foundry service's own spans still record prompts and replies, which include record text, whenever the project has Application Insights; see [Trace content](#trace-content). Before using real records, protect the Log Analytics tables or disconnect Application Insights. |
 
 ## Token cost per turn
 
@@ -93,3 +93,25 @@ as the drafter because the test subscription had no `gpt-5.4-mini` quota.
 - **Still unverified:** whether azd fills `AZURE_PRINCIPAL_ID` on its own. The
   test set it explicitly, as the README describes.
 
+## Trace content
+
+Verified live on 2026-11-15: with `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false`,
+no span from the agent container carried message content, but the Foundry service's own
+`invoke_agent` and `chat` spans (`cloud_RoleName` `responsesapi`, `sdkVersion` `aifoundry-v1.0`)
+contained the full `gen_ai.input.messages` and `gen_ai.output.messages`. `ENABLE_SENSITIVE_DATA`
+and `AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED` did not change that.
+
+According to [Foundry tracing and data handling](https://learn.microsoft.com/azure/foundry/observability/concepts/trace-data),
+tracing records prompts and model inputs and outputs whenever the project is connected to
+Application Insights, and disconnecting Application Insights is the only way to stop it. Control
+who can read it instead: grant Log Analytics Reader sparingly, set the Log Analytics tables to
+[protected](https://learn.microsoft.com/azure/azure-monitor/logs/protected-tables-configure) so
+reading them needs Privileged Monitoring Data Reader, and set retention to what you need.
+
+Check what your project records:
+
+```kusto
+dependencies
+| where timestamp > ago(1h)
+| summarize spans = count(), with_content = countif(isnotempty(customDimensions["gen_ai.input.messages"])) by cloud_RoleName
+```
